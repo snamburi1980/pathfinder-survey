@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pathfinder — Find Your Next Opportunity</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0a1628;
+    --gold: #f5a623;
+    --gold-light: #ffd07a;
+    --cream: #fdf8f0;
+    --sage: #4a9b8e;
+    --sage-light: #e8f5f3;
+    --text: #1a2540;
+    --muted: #6b7a99;
+    --border: #e2e8f0;
+    --white: #ffffff;
+    --error: #e53e3e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -20%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(74,155,142,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 640px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--gold); }
+
+  .header-sub {
+    color: rgba(255,255,255,0.55);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+  }
+
+  /* Progress */
+  .progress-bar {
+    background: rgba(255,255,255,0.1);
+    border-radius: 100px;
+    height: 4px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 100px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .step-indicator {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .step-name {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* Card */
+  .card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    animation: slideUp 0.5s ease;
+  }
+
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .step-header {
+    margin-bottom: 28px;
+  }
+
+  .step-tag {
+    display: inline-block;
+    background: var(--sage-light);
+    color: var(--sage);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    margin-bottom: 12px;
+  }
+
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Form elements */
+  .field-group { margin-bottom: 20px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 0.2px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  select {
+    width: 100%;
+    padding: 13px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--cream);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--sage);
+    box-shadow: 0 0 0 3px rgba(74,155,142,0.15);
+    background: var(--white);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* Pill options */
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .pill-option {
+    position: relative;
+  }
+
+  .pill-option input[type="checkbox"],
+  .pill-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .pill-option label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border: 2px solid var(--border);
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--cream);
+    transition: all 0.18s ease;
+    margin: 0;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .pill-option label:hover {
+    border-color: var(--sage);
+    color: var(--sage);
+    background: var(--sage-light);
+  }
+
+  .pill-option input:checked + label {
+    border-color: var(--sage);
+    background: var(--sage);
+    color: var(--white);
+    box-shadow: 0 4px 12px rgba(74,155,142,0.3);
+  }
+
+  .pill-emoji { font-size: 15px; }
+
+  /* Card options (for who are you) */
+  .card-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .card-option {
+    position: relative;
+  }
+
+  .card-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .card-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px 16px;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    background: var(--cream);
+    transition: all 0.2s ease;
+    margin: 0;
+  }
+
+  .card-option label:hover {
+    border-color: var(--sage);
+    background: var(--sage-light);
+  }
+
+  .card-option input:checked + label {
+    border-color: var(--sage);
+    background: linear-gradient(135deg, var(--sage-light), #d4eeea);
+    box-shadow: 0 6px 20px rgba(74,155,142,0.2);
+  }
+
+  .card-icon {
+    font-size: 32px;
+    line-height: 1;
+  }
+
+  .card-label-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-label-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* Range slider */
+  .slider-wrap { margin-top: 4px; }
+
+  .slider-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--sage);
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 8px;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--sage) 0%, var(--border) 0%);
+    outline: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    appearance: none;
+    transition: background 0.1s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 3px solid var(--sage);
+    box-shadow: 0 2px 8px rgba(74,155,142,0.4);
+    cursor: pointer;
+  }
+
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Willingness to pay */
+  .pay-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .pay-option {
+    position: relative;
+  }
+
+  .pay-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+  }
+
+  .pay-option label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    background: var(--cream);
+    transition: all 0.18s ease;
+    margin: 0;
+  }
+
+  .pay-option label:hover {
+    border-color: var(--gold);
+    background: #fffbf0;
+  }
+
+  .pay-option input:checked + label {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, #fffbf0, #fff8e6);
+    box-shadow: 0 4px 16px rgba(245,166,35,0.2);
+  }
+
+  .pay-amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'Playfair Display', serif;
+  }
+
+  .pay-desc {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    align-items: center;
+  }
+
+  .btn-back {
+    padding: 14px 20px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+
+  .btn-back:hover {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
+  .btn-next {
+    flex: 1;
+    padding: 15px 28px;
+    background: linear-gradient(135deg, var(--navy), #1a2e4a);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-next:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(10,22,40,0.35);
+  }
+
+  .btn-next:active { transform: translateY(0); }
+
+  .btn-submit {
+    flex: 1;
+    padding: 15px 28px;
+    background: linear-gradient(135deg, var(--gold), #e8951a);
+    color: var(--navy);
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(245,166,35,0.45);
+  }
+
+  /* Thank you screen */
+  .thankyou {
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  .thankyou-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 24px;
+    box-shadow: 0 12px 32px rgba(245,166,35,0.35);
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .thankyou h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .thankyou p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 380px;
+    margin: 0 auto 28px;
+  }
+
+  .thankyou-badge {
+    display: inline-block;
+    background: var(--sage-light);
+    color: var(--sage);
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* Error */
+  .error-msg {
+    font-size: 12px;
+    color: var(--error);
+    margin-top: 6px;
+    display: none;
+  }
+
+  .field-error input,
+  .field-error select {
+    border-color: var(--error);
+  }
+
+  .field-error .error-msg { display: block; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .card { padding: 28px 22px; }
+    .row-2 { grid-template-columns: 1fr; }
+    .card-options { grid-template-columns: 1fr 1fr; }
+    .pay-options { grid-template-columns: 1fr; }
+    .step-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🧭</div>
+      <div class="logo-text">Path<span>finder</span></div>
+    </div>
+    <div class="header-sub">Your AI guide to internships, volunteering & more</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-label">
+    <span class="step-indicator" id="stepCount">Step 1 of 5</span>
+    <span class="step-name" id="stepName">Who are you?</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:20%"></div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- STEP 1: Who are you -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <div class="step-tag">Getting started</div>
+        <div class="step-title">Who's filling this out?</div>
+        <div class="step-desc">This helps us personalize your experience from the start.</div>
+      </div>
+
+      <div class="card-options">
+        <div class="card-option">
+          <input type="radio" name="userType" id="typeStudent" value="student">
+          <label for="typeStudent">
+            <span class="card-icon">🎒</span>
+            <span class="card-label-text">Student</span>
+            <span class="card-label-sub">I'm looking for opportunities</span>
+          </label>
+        </div>
+        <div class="card-option">
+          <input type="radio" name="userType" id="typeParent" value="parent">
+          <label for="typeParent">
+            <span class="card-icon">👨‍👩‍👧</span>
+            <span class="card-label-text">Parent</span>
+            <span class="card-label-sub">Searching for my child</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field-group">
+        <label for="fullName">Full Name</label>
+        <input type="text" id="fullName" placeholder="e.g. Nandan Sharma">
+      </div>
+
+      <div class="row-2">
+        <div class="field-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="you@email.com">
+        </div>
+        <div class="field-group">
+          <label for="phone">WhatsApp / Phone</label>
+          <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-next" onclick="nextStep(1)">
+          Continue <span>→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Student Profile -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-tag">Student profile</div>
+        <div class="step-title">Tell us about the student</div>
+        <div class="step-desc">Used to match the right programs for the right age, stage and goals.</div>
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label for="studentFirst">Student First Name</label>
+          <input type="text" id="studentFirst" placeholder="e.g. Nandan">
+        </div>
+        <div class="field-group">
+          <label for="studentLast">Student Last Name</label>
+          <input type="text" id="studentLast" placeholder="e.g. Sharma">
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label for="gradeLevel">Grade / Year</label>
+          <select id="gradeLevel">
+            <option value="">Select grade...</option>
+            <option value="8">8th Grade</option>
+            <option value="9">9th Grade (Freshman)</option>
+            <option value="10">10th Grade (Sophomore)</option>
+            <option value="11">11th Grade (Junior)</option>
+            <option value="12">12th Grade (Senior)</option>
+            <option value="college1">College — Year 1</option>
+            <option value="college2">College — Year 2</option>
+            <option value="college3">College — Year 3</option>
+            <option value="college4">College — Year 4</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="zipCode">Zip Code</label>
+          <input type="text" id="zipCode" placeholder="e.g. 75078" maxlength="5">
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="schoolName">School / University Name</label>
+        <input type="text" id="schoolName" placeholder="e.g. Prosper High School">
+      </div>
+      <div class="field-group">
+        <label for="academics">How are academics going this year?</label>
+        <select id="academics">
+          <option value="">Select...</option>
+          <option value="excellent">Excellent — Honor Roll / Top of class</option>
+          <option value="good">Good — Above average</option>
+          <option value="average">Average — Keeping up</option>
+          <option value="improving">Improving — Working on it</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="prevStep(2)">&#8592; Back</button>
+        <button class="btn-next" onclick="nextStep(2)">Continue &#8594;</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Career Vertical -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-tag">Career direction</div>
+        <div class="step-title">What career path are you targeting?</div>
+        <div class="step-desc">Pick your main field then narrow your sub-specialty. This powers our scoring engine.</div>
+      </div>
+      <div class="field-group">
+        <label>Primary career vertical</label>
+        <div class="card-options" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="card-option"><input type="radio" name="vertical" id="vMed" value="medicine" onchange="showSub('medicine')"><label for="vMed"><span class="card-icon">&#127973;</span><span class="card-label-text">Medicine</span></label></div>
+          <div class="card-option"><input type="radio" name="vertical" id="vEng" value="engineering" onchange="showSub('engineering')"><label for="vEng"><span class="card-icon">&#9881;&#65039;</span><span class="card-label-text">Engineering</span></label></div>
+          <div class="card-option"><input type="radio" name="vertical" id="vBiz" value="business" onchange="showSub('business')"><label for="vBiz"><span class="card-icon">&#128202;</span><span class="card-label-text">Business</span></label></div>
+          <div class="card-option"><input type="radio" name="vertical" id="vLaw" value="law" onchange="showSub('law')"><label for="vLaw"><span class="card-icon">&#9878;&#65039;</span><span class="card-label-text">Law</span></label></div>
+          <div class="card-option"><input type="radio" name="vertical" id="vArts" value="arts" onchange="showSub('arts')"><label for="vArts"><span class="card-icon">&#127912;</span><span class="card-label-text">Arts &amp; Media</span></label></div>
+          <div class="card-option"><input type="radio" name="vertical" id="vOther" value="other" onchange="showSub('other')"><label for="vOther"><span class="card-icon">&#10024;</span><span class="card-label-text">Other</span></label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_medicine">
+        <label>Which medical specialty interests you most?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm1" value="cardiothoracic"><label for="sm1">Cardiothoracic</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm2" value="neurology"><label for="sm2">Neurology</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm3" value="pediatrics"><label for="sm3">Pediatrics</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm4" value="oncology"><label for="sm4">Oncology</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm5" value="emergency"><label for="sm5">Emergency Med</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sm6" value="general"><label for="sm6">General / Undecided</label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_engineering">
+        <label>Which engineering field?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="subvertical" id="se1" value="software"><label for="se1">Software</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="se2" value="mechanical"><label for="se2">Mechanical</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="se3" value="electrical"><label for="se3">Electrical</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="se4" value="biomedical"><label for="se4">Biomedical</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="se5" value="ai_data"><label for="se5">AI / Data</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="se6" value="civil"><label for="se6">Civil</label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_business">
+        <label>Which business area?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="subvertical" id="sb1" value="entrepreneurship"><label for="sb1">Entrepreneurship</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sb2" value="finance"><label for="sb2">Finance</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sb3" value="marketing"><label for="sb3">Marketing</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sb4" value="consulting"><label for="sb4">Consulting</label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_law">
+        <label>Which legal area?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="subvertical" id="sl1" value="criminal"><label for="sl1">Criminal Law</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sl2" value="corporate"><label for="sl2">Corporate Law</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sl3" value="civil_rights"><label for="sl3">Civil Rights</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sl4" value="public_policy"><label for="sl4">Public Policy</label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_arts">
+        <label>Which creative field?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="subvertical" id="sa1" value="design"><label for="sa1">Design / UX</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sa2" value="film"><label for="sa2">Film / Media</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sa3" value="music"><label for="sa3">Music</label></div>
+          <div class="pill-option"><input type="radio" name="subvertical" id="sa4" value="writing"><label for="sa4">Writing / Journalism</label></div>
+        </div>
+      </div>
+      <div class="subvertical-box" id="sub_other">
+        <label>Describe your career interest</label>
+        <input type="text" id="otherVertical" placeholder="e.g. Environmental Science, Psychology...">
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="prevStep(3)">&#8592; Back</button>
+        <button class="btn-next" onclick="nextStep(3)">Continue &#8594;</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Experience -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-tag">Your experience</div>
+        <div class="step-title">What have you done so far?</div>
+        <div class="step-desc">This helps us find programs that match your current level, not too easy or out of reach.</div>
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label for="volunteerHours">Volunteer Hours So Far</label>
+          <input type="number" id="volunteerHours" placeholder="e.g. 25" min="0">
+        </div>
+        <div class="field-group">
+          <label for="gpaRange">GPA Range <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <select id="gpaRange">
+            <option value="">Select...</option>
+            <option value="4.0">4.0 — Straight A's</option>
+            <option value="3.5-3.9">3.5 – 3.9</option>
+            <option value="3.0-3.4">3.0 – 3.4</option>
+            <option value="2.5-2.9">2.5 – 2.9</option>
+            <option value="below_2.5">Below 2.5</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Certifications already earned</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="checkbox" id="cert1" value="cpr_aed"><label for="cert1">CPR / AED</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert2" value="first_aid"><label for="cert2">First Aid</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert3" value="cna"><label for="cert3">CNA</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert4" value="coding"><label for="cert4">Coding Cert</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert5" value="ap_courses"><label for="cert5">AP Courses</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert6" value="sat_act"><label for="cert6">SAT/ACT Prep</label></div>
+          <div class="pill-option"><input type="checkbox" id="cert7" value="none"><label for="cert7">None yet</label></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="pastActivities">Describe activities, clubs or programs you have done</label>
+        <textarea id="pastActivities" placeholder="e.g. NHS member, hospital volunteering at Baylor, robotics club captain, science fair..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="prevStep(4)">&#8592; Back</button>
+        <button class="btn-next" onclick="nextStep(4)">Continue &#8594;</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Preferences -->
+    <div class="step" id="step5">
+      <div class="step-header">
+        <div class="step-tag">Preferences</div>
+        <div class="step-title">What are you looking for?</div>
+        <div class="step-desc">Set your filters. Our AI uses these to rank and score every match.</div>
+      </div>
+      <div class="field-group">
+        <label>Type of opportunity</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="checkbox" id="opp1" value="volunteering"><label for="opp1">Volunteering</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp2" value="internships"><label for="opp2">Internships</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp3" value="summer_programs"><label for="opp3">Summer Programs</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp4" value="parttime"><label for="opp4">Part-time Jobs</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp5" value="research"><label for="opp5">Research</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp6" value="shadowing"><label for="opp6">Job Shadowing</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp7" value="certifications"><label for="opp7">Certifications</label></div>
+          <div class="pill-option"><input type="checkbox" id="opp8" value="mentorship"><label for="opp8">Mentorship</label></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field-group">
+        <label>Distance willing to travel from zip code</label>
+        <div class="slider-wrap">
+          <div class="slider-value" id="distanceVal">25 miles</div>
+          <input type="range" id="distanceSlider" min="5" max="100" value="25" step="5" oninput="updateSlider()">
+          <div class="slider-labels"><span>5 mi</span><span>50 mi</span><span>100 mi</span></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Open to virtual / remote programs?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="radio" name="virtual" id="vYes" value="yes"><label for="vYes">Yes, include virtual</label></div>
+          <div class="pill-option"><input type="radio" name="virtual" id="vNo" value="no"><label for="vNo">In-person only</label></div>
+          <div class="pill-option"><input type="radio" name="virtual" id="vOnly" value="only"><label for="vOnly">Virtual only</label></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>When are you available?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="checkbox" id="av1" value="weekends"><label for="av1">Weekends</label></div>
+          <div class="pill-option"><input type="checkbox" id="av2" value="afterschool"><label for="av2">After School</label></div>
+          <div class="pill-option"><input type="checkbox" id="av3" value="summer"><label for="av3">Summer</label></div>
+          <div class="pill-option"><input type="checkbox" id="av4" value="breaks"><label for="av4">School Breaks</label></div>
+          <div class="pill-option"><input type="checkbox" id="av5" value="anytime"><label for="av5">Anytime</label></div>
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label for="urgency">How soon do you need something?</label>
+          <select id="urgency">
+            <option value="">Select...</option>
+            <option value="now">Right now</option>
+            <option value="3months">Within 3 months</option>
+            <option value="6months">Within 6 months</option>
+            <option value="exploring">Just exploring</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="budget">Budget for programs</label>
+          <select id="budget">
+            <option value="">Select...</option>
+            <option value="free_only">Free only</option>
+            <option value="under_500">Under $500</option>
+            <option value="under_1000">Under $1,000</option>
+            <option value="any">Any — quality matters most</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="prevStep(5)">&#8592; Back</button>
+        <button class="btn-next" onclick="nextStep(5)">Continue &#8594;</button>
+      </div>
+    </div>
+
+    <!-- STEP 6: Final -->
+    <div class="step" id="step6">
+      <div class="step-header">
+        <div class="step-tag">Almost done!</div>
+        <div class="step-title">Last few questions</div>
+        <div class="step-desc">Honest answers here directly shape what we build.</div>
+      </div>
+      <div class="field-group">
+        <label>How should we send you weekly matches?</label>
+        <div class="pill-group">
+          <div class="pill-option"><input type="checkbox" id="notify1" value="whatsapp"><label for="notify1">WhatsApp</label></div>
+          <div class="pill-option"><input type="checkbox" id="notify2" value="email"><label for="notify2">Email</label></div>
+          <div class="pill-option"><input type="checkbox" id="notify3" value="sms"><label for="notify3">SMS</label></div>
+          <div class="pill-option"><input type="checkbox" id="notify4" value="app"><label for="notify4">App notification</label></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field-group">
+        <label>If this AI found and applied to programs for you automatically, what would you pay?</label>
+        <div class="pay-options">
+          <div class="pay-option"><input type="radio" name="willPay" id="pay1" value="free_only"><label for="pay1"><span class="pay-amount">Free only</span><span class="pay-desc">Only if it costs nothing</span></label></div>
+          <div class="pay-option"><input type="radio" name="willPay" id="pay2" value="5"><label for="pay2"><span class="pay-amount">~$5/mo</span><span class="pay-desc">Saves hours of research</span></label></div>
+          <div class="pay-option"><input type="radio" name="willPay" id="pay3" value="10"><label for="pay3"><span class="pay-amount">~$10/mo</span><span class="pay-desc">Worth it for right matches</span></label></div>
+          <div class="pay-option"><input type="radio" name="willPay" id="pay4" value="unsure"><label for="pay4"><span class="pay-amount">Not sure</span><span class="pay-desc">Depends on quality</span></label></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field-group">
+        <label for="referral">How did you hear about Pathfinder? <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="referral" placeholder="WhatsApp group, school counselor, friend...">
+      </div>
+      <div class="field-group">
+        <label for="openFeedback">Biggest frustration finding opportunities today? <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <textarea id="openFeedback" placeholder="Be honest — this shapes what we build..." style="min-height:70px;"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="prevStep(6)">&#8592; Back</button>
+        <button class="btn-submit" id="submitBtn" onclick="submitForm()">&#128640; Submit &amp; Get Early Access</button>
+      </div>
+    </div>
+
+    <!-- THANK YOU -->
+    <div class="step" id="stepDone">
+      <div class="thankyou">
+        <div class="thankyou-icon">&#127881;</div>
+        <h2>You're on the list!</h2>
+        <p>Thank you for being an early Pathfinder. We'll personally send you matched opportunities within <strong>48 hours</strong> and you'll get <strong>your first month free</strong> when we launch.</p>
+        <div class="thankyou-badge">&#129517; Early Access Confirmed</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 6;
+  const stepNames = {1:"Who are you?",2:"Student profile",3:"Career direction",4:"Your experience",5:"What you need",6:"Final questions"};
+
+  function updateProgress(step) {
+    document.getElementById("progressFill").style.width = (step/totalSteps*100) + "%";
+    document.getElementById("stepCount").textContent = "Step " + step + " of " + totalSteps;
+    document.getElementById("stepName").textContent = stepNames[step] || "";
+  }
+
+  function showStep(step) {
+    document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+    var el = document.getElementById("step" + step);
+    if (el) { el.classList.add("active"); el.style.animation="none"; requestAnimationFrame(function(){ el.style.animation="slideUp 0.4s ease"; }); }
+    updateProgress(step);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function nextStep(from) {
+    if (from===1) {
+      if (!document.querySelector("input[name=userType]:checked") || !document.getElementById("fullName").value.trim() || !document.getElementById("email").value.trim()) {
+        alert("Please select who you are and enter your name and email."); return;
+      }
+    }
+    if (from===2) {
+      if (!document.getElementById("gradeLevel").value || !document.getElementById("zipCode").value.trim()) {
+        alert("Please select a grade and enter your zip code."); return;
+      }
+    }
+    if (from===3) {
+      if (!document.querySelector("input[name=vertical]:checked")) {
+        alert("Please select a career vertical."); return;
+      }
+    }
+    currentStep = from + 1; showStep(currentStep);
+  }
+
+  function prevStep(from) { currentStep = from - 1; showStep(currentStep); }
+
+  function showSub(field) {
+    document.querySelectorAll(".subvertical-box").forEach(b => b.style.display="none");
+    var box = document.getElementById("sub_" + field);
+    if (box) box.style.display = "block";
+  }
+
+  function updateSlider() {
+    var val = document.getElementById("distanceSlider").value;
+    document.getElementById("distanceVal").textContent = val + " miles";
+    var pct = ((val-5)/(100-5))*100;
+    document.getElementById("distanceSlider").style.background = "linear-gradient(90deg, var(--sage) "+pct+"%, var(--border) "+pct+"%)";
+  }
+
+  async function submitForm() {
+    var willPay = document.querySelector("input[name=willPay]:checked");
+    if (!willPay) { alert("Please answer the pricing question."); return; }
+    var btn = document.getElementById("submitBtn");
+    btn.textContent = "Submitting..."; btn.disabled = true;
+    var data = {
+      _subject: "New Pathfinder Profile - " + document.getElementById("fullName").value,
+      userType: (document.querySelector("input[name=userType]:checked")||{}).value||"",
+      submitterName: document.getElementById("fullName").value,
+      email: document.getElementById("email").value,
+      phone: document.getElementById("phone").value,
+      studentFirst: document.getElementById("studentFirst").value,
+      studentLast: document.getElementById("studentLast").value,
+      grade: document.getElementById("gradeLevel").value,
+      zip: document.getElementById("zipCode").value,
+      school: document.getElementById("schoolName").value,
+      academics: document.getElementById("academics").value,
+      careerVertical: (document.querySelector("input[name=vertical]:checked")||{}).value||"",
+      subVertical: (document.querySelector("input[name=subvertical]:checked")||{}).value || (document.getElementById("otherVertical")||{}).value||"",
+      volunteerHours: document.getElementById("volunteerHours").value,
+      gpa: document.getElementById("gpaRange").value,
+      certifications: [...document.querySelectorAll("input[id^=cert]:checked")].map(i=>i.value).join(", "),
+      pastActivities: document.getElementById("pastActivities").value,
+      opportunityTypes: [...document.querySelectorAll("input[id^=opp]:checked")].map(i=>i.value).join(", "),
+      distanceMiles: document.getElementById("distanceSlider").value + " miles",
+      virtual: (document.querySelector("input[name=virtual]:checked")||{}).value||"",
+      availability: [...document.querySelectorAll("input[id^=av]:checked")].map(i=>i.value).join(", "),
+      urgency: document.getElementById("urgency").value,
+      budget: document.getElementById("budget").value,
+      notifications: [...document.querySelectorAll("input[id^=notify]:checked")].map(i=>i.value).join(", "),
+      willPay: willPay.value,
+      referral: document.getElementById("referral").value,
+      feedback: document.getElementById("openFeedback").value,
+      submittedAt: new Date().toLocaleString()
+    };
+    try {
+      var response = await fetch("https://formspree.io/f/xgodpage", {method:"POST", headers:{"Content-Type":"application/json","Accept":"application/json"}, body:JSON.stringify(data)});
+      var result = await response.json();
+      if (response.ok) {
+        document.querySelector(".progress-bar").style.display="none";
+        document.querySelector(".progress-label").style.display="none";
+        document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
+        document.getElementById("stepDone").classList.add("active");
+      } else {
+        var msg = result.error || (result.errors||[]).map(e=>e.message).join(", ") || "Unknown error";
+        btn.textContent="Submit & Get Early Access"; btn.disabled=false;
+        alert("Error ("+response.status+"): "+msg+"\n\nCheck formspree.io to verify your form is active.");
+      }
+    } catch(err) {
+      btn.textContent="Submit & Get Early Access"; btn.disabled=false;
+      alert("Network error: "+err.message);
+    }
+  }
+
+  updateSlider();
+</script>
+</body>
+</html>
